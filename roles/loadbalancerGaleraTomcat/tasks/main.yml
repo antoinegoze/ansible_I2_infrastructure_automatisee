@@ -1,0 +1,189 @@
+---
+  - name: Update all packages to the latest version
+    apt:
+      update_cache: yes
+      state: latest
+
+  - name: activation du dépôt de backports
+    shell: "{{item}}"
+    with_items:
+      - echo "deb http://ftp.debian.org/debian/ stretch-backports main" >> /etc/apt/sources.list.d/backports.list
+
+  - name: création répertoire ha.d pour heartbeat
+    file:
+      path: /etc/ha.d
+      state: directory
+      mode: '0755'
+
+  - name: création fichier ha.cf pour heartbeat
+    file:
+      path: /etc/ha.d/ha.cf
+      state: touch
+
+  - name: création fichier haresources pour heartbeat
+    file:
+      path: /etc/ha.d/haresources
+      state: touch
+
+  - name: création fichier authkeys pour heartbeat
+    file:
+      path: /etc/ha.d/authkeys
+      state: touch
+      mode: '0600'
+
+  - name: install HAProxy
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - haproxy
+      - curl
+      - sudo
+      - tree
+      - whois
+      - net-tools
+      - curl
+
+  - name: éditer la valeur ENABLED dans les fichiers /etc/default/haproxy et /etc/init.d/haproxysur chaque Load Balancer
+    shell: "{{item}}"
+    with_items:
+      - sed -i "s/ENABLED=0/ENABLED=1/g" /etc/default/haproxy
+      - sed -i "s/ENABLED=0/ENABLED=1/g" /etc/init.d/haproxy
+
+  - name: haproxy conf
+    blockinfile:
+      dest: /etc/haproxy/haproxy.cfg
+      insertbefore: EOF
+      block: |
+        #Configuration de l'ip virtuelle balancée
+        listen cluster_db
+        bind {{ipVirtLBGTomcat}}:3306
+            #MySQL
+            mode tcp
+            #Mode de balancement choisi : Round Robin
+            balance roundrobin
+            #Les serveurs mysql
+            server mariadb1 {{ipBDD1Tomcat}}:3306 check
+            server mariadb2 {{ipBDD2Tomcat}}:3306 check
+            server mariadb3 {{ipBDD3Tomcat}}:3306 check
+        #Stats
+        listen stats
+        bind {{ipVirtLBGTomcat}}:80
+            stats enable
+            stats hide-version
+            stats refresh 30s
+            stats show-node
+            stats auth admin:admin
+            stats uri /haproxy?stats
+
+  - name: change /etc/sysctl.conf file
+    blockinfile:
+      dest: /etc/sysctl.conf
+      insertbefore: EOF
+      block: |
+        net.ipv4.ip_nonlocal_bind=1
+
+  - name: recharger le fichier /etc/sysctl.conf
+    shell: "{{item}}"
+    with_items:
+      - sysctl -p
+
+  - name: installer heartbeat pour mettre en place l'adresse IP de balancement que l'on a configuré dans le fichier /etc/haproxy/haproxy.cfg
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - heartbeat
+
+  - name: conf heartbeat
+    blockinfile:
+      dest: /etc/ha.d/ha.cf
+      insertafter: AOF
+      block: |
+        logfile /var/log/heartbeat.log
+        logfacility daemon
+        mcast enp0s3 239.0.0.11 694 1 0
+        bcast enp0s3
+        warntime 4
+        deadtime 5
+        initdead 15
+        keepalive 2
+        #Re-balance le services sur le Load Balancer primaire quand il revient opérationnel
+        auto_failback on
+        #Serveurs du cluster de Load Balancer
+        node {{mainLBGaleraTomcat}}
+        node {{backupLBGaleraTomcat}}
+
+
+  - name: créer le fichier de configuration de basculement /etc/ha.d/haresources (passage du statut passif au statut actif d'un Load Balancer)
+    blockinfile:
+      dest: /etc/ha.d/haresources
+      insertafter: AOF
+      block: |
+        {{mainLBGaleraTomcat}} IPaddr::{{ipVirtLBGTomcat}}/24/enp0s3 haproxy
+
+
+  - name: créer le fichier de clé d'authentification sur chaque Load Balancer
+    blockinfile:
+      dest: /etc/ha.d/authkeys
+      insertafter: AOF
+      block: |
+        auth 3
+        3 md5 "{{passAuthkeysGaleraTomcat}}"
+
+  - name: restart heartbeat
+    service:
+      name: heartbeat
+      state: restarted
+
+  - name: restart haproxy
+    service:
+      name: haproxy
+      state: restarted
+
+  - name: Touch a iptables file
+    file:
+      path: /etc/network/if-pre-up.d/iptables
+      state: touch
+
+  - name: conf heartbeat
+    blockinfile:
+      dest: /etc/network/if-pre-up.d/iptables
+      insertafter: AOF
+      block: |
+          #!/bin/bash
+
+          iptables-restore < /etc/iptables.test.rules
+
+          # supprime les règles déjà écrites
+          iptables -F; iptables -X
+
+          # on refuse toutes les connexions
+          iptables -t filler-P INPUT DROP
+          iptables -t filler-P FORWARD DROP
+          iptables -t filler-P OUTPUT DROP
+
+          # autorise loopback
+          iptables -t filter -A INPUT -i icmp -j ACCEPT
+          iptables -t filter -A OUTPUT -o icmp -j ACCEPT
+
+          # autorise ping ICMP
+          iptables -t filter -A INPUT -p icmp -j ACCEPT
+          iptables -t filter -A OUTPUT -p icmp -j ACCEPT
+
+          # ouverture du port SSH
+          iptables -t filter -A INPUT -p TCP --dport 22 -j ACCEPT
+          iptables -t filter -A OUTPUT -p TCP --sport 22 -j ACCEPT
+          # autorise les échanges sur le port 8080 en entrée, uniquement pour l'ip ?? et sur l'interface enp0s8
+          # les loadbalancers n'acceptent que le traffic venant des vm moodle et mariaDB associées
+          iptables -t filter -i enp0s3 --src {{ipTomcat1}} -A INPUT -p TCP --dport 8080 -j ACCEPT
+          iptables -t filter -i enp0s3 --src {{ipTomcat2}} -A INPUT -p TCP --dport 8080 -j ACCEPT
+          iptables -t filter -i enp0s3 --src {{ipGaleraTomcat1}} -A INPUT -p TCP --dport 694 -j ACCEPT
+          iptables -t filter -i enp0s3 --src {{ipGaleraTomcat2}} -A INPUT -p TCP --dport 694 -j ACCEPT
+          iptables -t filter -i enp0s3 --src {{ipBDD1Tomcat}} -A INPUT -p TCP --dport 3306 -j ACCEPT
+          iptables -t filter -i enp0s3 --src {{ipBDD2Tomcat}} -A INPUT -p TCP --dport 3306 -j ACCEPT
+          iptables -t filter -i enp0s3 --src {{ipBDD3Tomcat}} -A INPUT -p TCP --dport 3306 -j ACCEPT
+          # autorise les échanges sur leS portS 8080 et 3306 en sortie
+          iptables -t filter -A OUTPUT -p TCP --sport 8080 -j ACCEPT
+          iptables -t filter -A OUTPUT -p TCP --sport 3306 -j ACCEPT
+          iptables -t filter -A OUTPUT -p TCP --sport 694 -j ACCEPT
+
+          # fermeture des autres ports
+          iptables -t filter -A INPUT -j DROP
+          iptables -t filter -A OUTPUT -j DROP

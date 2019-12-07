@@ -1,0 +1,51 @@
+---
+  - name: Update all packages to the latest version
+    apt:
+      update_cache: yes
+      state: latest
+
+  - name: install jdk
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - curl
+      - default-jdk
+      - ufw
+      - php7.0
+      - libapache2-mod-php7.0
+      - php7.0-pspell
+      - php7.0-curl
+      - php7.0-gd
+      - php7.0-intl
+      - php7.0-mysql
+      - php7.0-xml
+      - php7.0-xmlrpc
+      - php7.0-ldap
+      - php7.0-zip
+      - php7.0-soap
+      - php7.0-mbstring
+
+
+  - name: import gpg keys
+    apt_key:
+      state: present
+      url: https://pkg.jenkins.io/debian/jenkins.io.key
+
+  - name:  add repository jenkins
+    shell: "{{item}}"
+    with_items:
+      - sh -c 'echo deb http://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+
+  - name: apt get update
+    apt:
+      update_cache: yes
+
+  - name: install jenkins
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - jenkins
+
+  - name: Listening port on jenkins
+    replace:
+      dest: /etc/default/jenkins
+      regexp: "HTTP_PORT=8080"
+      replace: "HTTP_PORT={{portJenkins}}"

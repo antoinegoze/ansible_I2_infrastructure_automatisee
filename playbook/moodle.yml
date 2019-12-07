@@ -1,0 +1,92 @@
+---
+- hosts: 192.168.56.102
+  tasks:
+  - name: install apache2
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - apache2
+      - mysql-client
+      - php7.0
+      - libapache2-mod-php7.0
+      - php7.0-pspell
+      - php7.0-curl
+      - php7.0-gd 
+      - php7.0-intl
+      - php7.0-mysql
+      - php7.0-xml
+      - php7.0-xmlrpc
+      - php7.0-ldap
+      - php7.0-zip
+      - php7.0-soap
+      - php7.0-mbstring
+
+  - name: download moodle
+    get_url: url=http://download.moodle.org/stable35/moodle-latest-35.tgz dest=/var/www/html
+  - name: extract moodle
+    unarchive:
+      src: /var/www/html/moodle-latest-35.tgz
+      dest: /var/www/html
+      remote_src: yes
+
+  - name: chown www-data
+    file:
+      path: /var/www/html/moodle
+      owner: www-data
+      recurse: yes
+      mode: 0777
+
+  - name: chmod moodle data
+    file:
+      path: /var/www/html/moodledata
+      state: directory
+      owner: www-data
+      recurse: yes
+      mode: 0777
+
+  - name: apache2 listen on port8080
+    lineinfile: 
+      dest: /etc/apache2/ports.conf
+      regexp: "Listen 80"
+      state: absent
+  - name: namevirtualhost
+    blockinfile:
+      dest: /etc/apache2/ports.conf
+      insertbefore: BOF
+      block: |
+        NameVirtualHost 192.168.56.102:8080
+        Listen 192.168.56.102:8080
+
+  - name: copy conf file 
+    copy:
+      src: /etc/apache2/sites-available/000-default.conf
+      dest: /etc/apache2/sites-available/moodle.conf
+      remote_src: yes
+
+  - name: conf site moodle
+    lineinfile:
+      dest: /etc/apache2/sites-available/moodle.conf
+      regexp: "<VirtualHost \\*:80>"
+      state: absent
+
+  - name: change root directory
+    replace:
+      dest: /etc/apache2/sites-available/moodle.conf
+      regexp: 'DocumentRoot /var/www/html'
+      replace: 'DocumentRoot /var/www/html/moodle'
+
+  - name: conf site moodle 2
+    lineinfile: 
+      dest: /etc/apache2/sites-available/moodle.conf
+      insertbefore: BOF
+      line: "<VirtualHost 192.168.56.102:8080>"
+
+  - name: a2ensite moodle
+    command: a2ensite moodle.conf
+
+  - name: a2dissite default
+    command: a2dissite 000-default.conf
+ 
+  - name: restart apache2
+    service:
+      name: apache2
+      state: restarted

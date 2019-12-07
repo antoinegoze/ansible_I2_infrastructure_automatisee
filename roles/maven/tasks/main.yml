@@ -1,0 +1,11 @@
+---
+  - name: Update all packages to the latest version
+    apt:
+      update_cache: yes
+      state: latest
+
+  - name: install jdk and maven
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - maven
+      - default-jdk

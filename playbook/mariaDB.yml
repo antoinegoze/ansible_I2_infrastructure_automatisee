@@ -1,0 +1,64 @@
+---
+- hosts: 192.168.56.103
+  tasks:
+    - name: install mariadb
+      apt: name={{item}}  state=latest
+      with_items:
+        - mysql-client
+        - mysql-server
+        - php7.0
+        - libapache2-mod-php7.0
+        - php7.0-pspell
+        - php7.0-curl
+        - php7.0-gd
+        - php7.0-intl
+        - php7.0-mysql
+        - php7.0-xml
+        - php7.0-xmlrpc
+        - php7.0-ldap
+        - php7.0-zip
+        - php7.0-soap
+        - python-mysqldb
+        - php7.0-mbstring  
+    - name: insert lines
+      blockinfile:
+        dest: /etc/mysql/mariadb.conf.d/50-server.cnf
+        insertafter: "\\[mysqld\\]"
+        block: |
+          default_storage_engine=innodb
+          innodb_file_per_table=1
+          innodb_file_format=Barracuda
+          innodb_large_prefix=1
+
+    - name: replace bind address in mariadbconf
+      replace: 
+        dest: /etc/mysql/mariadb.conf.d/50-server.cnf
+        regexp: "bind-address"
+        replace: "#bind-address"
+
+    - name: restart mariadb
+      service: 
+        name: mariadb
+        state: restarted
+    - name: create database
+      mysql_db:
+        login_user: root
+        login_password: "network"
+        name: moodle
+        collation: utf8_unicode_ci
+        encoding: utf8 
+        state: present
+    - name: grant privilege
+      mysql_user:
+        name: root
+        password: "network"
+        host: "127.0.0.1"
+        priv: "moodle.*:ALL,GRANT"       
+        state: present
+    - name : grant remote
+      mysql_user:
+        name: root
+        password: "network"
+        host: "192.168.56.102"
+        priv: "moodle.*:ALL,GRANT"
+        state: present

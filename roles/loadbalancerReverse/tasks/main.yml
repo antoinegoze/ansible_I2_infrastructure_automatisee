@@ -1,0 +1,108 @@
+---
+  - name: install HAProxy and heartbeat
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - curl
+      - haproxy
+      - heartbeat
+
+  - name: Update all packages to the latest version
+    apt:
+      update_cache: yes
+      state: latest
+
+  - name: Touch /etc/heartbeat/ha.cf
+    file:
+      path: /etc/heartbeat/ha.cf
+      state: touch
+
+  - name: Touch /etc/heartbeat/haresources
+    file:
+      path: /etc/heartbeat/haresources
+      state: touch
+
+  - name: Touch /etc/heartbeat/authkeys
+    file:
+      path: /etc/heartbeat/authkeys
+      state: touch
+
+  - name: haproxy conf
+    blockinfile:
+      dest: /etc/haproxy/haproxy.cfg
+      insertbefore: EOF
+      block: |
+        frontend www
+        	bind *:80
+        	mode http
+        	default_backend moodle
+
+        backend moodle
+        	balance roundrobin
+        	server reverse1 {{ipReverse1}}:80
+          server reverse2 {{ipReverse2}}:80
+
+        frontend www2
+        	bind *:8080
+        	mode http
+        	default_backend tomcat
+
+        backend tomcat
+        	balance roundrobin
+        	server reverse1 {{ipReverse1}}:8080
+          server reverse2 {{ipReverse2}}:8080
+
+        frontend www3
+        	bind *:8081
+        	mode http
+        	default_backend jenkins
+
+        backend jenkins
+        	balance roundrobin
+        	server reverse1 {{ipReverse1}}:8081
+          server reverse2 {{ipReverse2}}:8081
+
+  - name: conf heartbeat
+    blockinfile:
+      dest: /etc/heartbeat/ha.cf
+      insertafter: AOF
+      block: |
+        logfile /var/log/heartbeat.log
+        logfacility daemon
+        node {{mainLBReverse}}
+        node {{backupLBReverse}}
+        keepalive 1
+        deadtime 10
+        bcast enp0s3
+        udpport 702
+        auto_failback yes
+
+  - name: conf heartbeat
+    blockinfile:
+      dest: /etc/heartbeat/haresources
+      insertafter: AOF
+      block: |
+        {{mainLBReverse}} {{ipReverseProxy}}
+
+  - name: conf heartbeat
+    blockinfile:
+      dest: /etc/heartbeat/authkeys
+      insertafter: AOF
+      block: |
+        auth 2
+        1 md5 "{{passAuthkeysReverse}}"
+        2 crc
+
+  - name: permissions keys
+    shell: "{{item}}"
+    with_items:
+      - chmod 600 /etc/heartbeat/authkeys
+
+  - name: restart heartbeat
+    service:
+      name: heartbeat
+      state: restarted
+
+  - name: restart haproxy
+    service:
+      name: haproxy
+      state: restarted

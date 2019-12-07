@@ -1,0 +1,17 @@
+---
+  - name: install nfs-common
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - nfs-common
+
+  - name: Creates nfs directory
+    file:
+      path: /mnt/nfs
+      state: directory
+
+  - name: Mount and bind a volume
+    mount:
+      path: /mnt/nfs
+      src: "{{ipServNFS}}:{{dirNFS}}"
+      state: mounted
+      fstype: nfs

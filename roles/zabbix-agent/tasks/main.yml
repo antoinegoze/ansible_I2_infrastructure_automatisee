@@ -1,0 +1,41 @@
+---
+  - name: install ZABBIX agent
+    apt:
+      name: zabbix-agent
+      update_cache: yes
+      state: latest
+
+  - name: config zabbix Server
+    replace:
+      dest: /etc/zabbix/zabbix_agentd.conf
+      regexp: "Server=127.0.0.1"
+      replace: "Server={{ipZabbixServ}}"
+
+  - name: config zabbix ServerActive
+    replace:
+      dest: /etc/zabbix/zabbix_agentd.conf
+      regexp: "ServerActive=127.0.0.1"
+      replace: "ServerActive={{ipZabbixServ}}"
+
+  - name: config zabbix Hostname
+    replace:
+      dest: /etc/zabbix/zabbix_agentd.conf
+      regexp: "Hostname=Zabbix server"
+      replace: "#HostnameItem=Zabbix server"
+
+  - name: config zabbix HostMetadataItem
+    replace:
+      dest: /etc/zabbix/zabbix_agentd.conf
+      regexp: "# HostMetadataItem="
+      replace: "HostMetadataItem=system.uname"
+
+  - name: config zabbix HostMetadataItem
+    replace:
+      dest: /etc/zabbix/zabbix_agentd.conf
+      regexp: "# HostnameItem=system.hostname"
+      replace: "HostnameItem=system.hostname"
+
+  - name: restart zabbix
+    service:
+      name: zabbix-agent
+      state: restarted

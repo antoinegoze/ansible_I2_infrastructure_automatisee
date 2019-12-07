@@ -1,0 +1,115 @@
+---
+  - name: install zabbix anf nginx
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - nginx
+
+  - name: Update all packages to the latest version
+    apt:
+      update_cache: yes
+      state: latest
+
+  - name: Touch /etc/nginx/sites-available/reverse
+    file:
+      path: /etc/nginx/sites-available/reverse
+      state: touch
+
+  - name: Touch /etc/nginx/sites-available/tomcat
+    file:
+      path: /etc/nginx/sites-available/tomcat
+      state: touch
+
+  - name: conf reverse proxy moodle
+    blockinfile:
+      dest: /etc/nginx/sites-available/reverse
+      insertafter: BOF
+      block: |
+
+        upstream backend_moodle{
+          server {{ipVirtLBM}};
+        }
+
+        server {
+          listen   80;
+          root /var/www/;
+          index index.php index.html index.htm;
+          location / {
+            proxy_set_header X-Real-IP  $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header Host $host;
+            proxy_pass http://backend_moodle;
+          }
+
+          location ~ /\.ht {
+            deny all;
+          }
+        }
+
+  - name: conf reverse proxy tomcat
+    blockinfile:
+      dest: /etc/nginx/sites-available/tomcat
+      insertafter: BOF
+      block: |
+        upstream backend_tomcat {
+          server {{ipVirtLBT}}:8080;
+        }
+
+        server {
+          listen   8080;
+          root /var/www/;
+          index index.php index.html index.htm;
+
+          location / {
+            proxy_set_header X-Real-IP  $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header Host $host;
+            proxy_pass http://backend_tomcat;
+          }
+
+          location ~ /\.ht {
+            deny all;
+          }
+        }
+
+        upstream backend_jenkins {
+          server {{ipVirtLBT}}:{{portJenkins}};
+        }
+
+        server {
+          listen   8081;
+          root /var/www/;
+          index index.php index.html index.htm;
+
+          location / {
+            proxy_set_header X-Real-IP  $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header Host $host;
+            proxy_pass http://backend_jenkins;
+          }
+
+          location ~ /\.ht {
+            deny all;
+          }
+        }
+
+  - name: Create symlink
+    file:
+      src: /etc/nginx/sites-available/reverse
+      dest: /etc/nginx/sites-enabled/reverse
+      state: link
+
+  - name: Create symlink
+    file:
+      src: /etc/nginx/sites-available/tomcat
+      dest: /etc/nginx/sites-enabled/tomcat
+      state: link
+
+  - name: Remove default file
+    file:
+      path: /etc/nginx/sites-available/default
+      state: absent
+
+  - name: restart nginx
+    service:
+      name: nginx
+      state: restarted

@@ -1,0 +1,31 @@
+---
+  - name: install nfs-kernel-server nfs-common
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - nfs-kernel-server
+      - nfs-common
+
+#  - name: create group
+#    group:
+#      name: nogroup
+#      state: present
+
+#  - name: Add the user
+#    user:
+#      name: root
+#      group: root
+
+  - name: Create a directory if it does not exist
+    file:
+      path: /home/{{dirNFS}}
+      owner: root
+      group: root
+      state: directory
+      mode: '0755'
+
+  - name: conf reverse proxy
+    blockinfile:
+      dest: /etc/exports
+      insertafter: BOF
+      block: |
+        {{dirNFS}}          {{networkNFS}}(rw,sync,no_subtree_check)

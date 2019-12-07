@@ -1,0 +1,109 @@
+---
+  - name: Update all packages to the latest version
+    apt:
+      update_cache: yes
+      state: latest
+
+  - name: install packages
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - software-properties-common
+      - dirmngr
+      - curl
+      - sudo
+      - tree
+      - whois
+      - net-tools
+
+  - name: ajouter mariaDB 10.3 à son système d'exploitation sur chaque VM MariaDB
+    shell: "{{item}}"
+    with_items:
+      - apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xF1656F24C74CD1D8
+      - add-apt-repository 'deb [arch=amd64,i386,ppc64el] http://ftp.igh.cnrs.fr/pub/mariadb/repo/10.3/debian stretch main'
+
+  - name: install mariadb
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - mariadb-server
+
+  - name: commenter bind-address dans le fichier de conf de mysql
+    replace:
+      dest: /etc/mysql/my.cnf
+      regexp: "bind-address"
+      replace: "#bind-address"
+
+
+  - name: conf mariadb
+    blockinfile:
+      dest: /etc/mysql/my.cnf
+      insertafter: BOF
+      block: |
+        #mysql settings
+        [mysqld]
+        bind-address=0.0.0.0
+        binlog_format=ROW
+        innodb_autoinc_lock_mode=2
+        innodb_flush_log_at_trx_commit=0
+        #configuration cluster galera
+        wsrep_cluster_name=Cluster_MariaDB_service_web
+        wsrep_cluster_address="gcomm://{{ipBDD1}},{{ipBDD2}},{{ipBDD3}}"
+        wsrep_node_name={{nodenameBackup}}
+        wsrep_node_address="{{nodeAddress}}"
+        wsrep_on=ON
+        wsrep_provider=/usr/lib/galera/libgalera_smm.so
+        wsrep_sst_method=rsync
+
+  - name: arrêter le service mariadb sur chaque VM MariaDB
+    service:
+      name: mariadb
+      state: stopped
+
+  - name: démarrer le service mariadb sur chaque VM MariaDB
+    service:
+      name: mariadb
+      state: started
+
+  - name: Touch a iptables file
+    file:
+      path: /etc/network/if-pre-up.d/iptables
+      state: touch
+
+  - name: conf heartbeat
+    blockinfile:
+      dest: /etc/network/if-pre-up.d/iptables
+      insertafter: AOF
+      block: |
+
+          #!/bin/bash
+
+          iptables-restore < /etc/iptables.test.rules
+
+          # supprime les règles déjà écrites
+          iptables -F; iptables -X
+
+          # on refuse toutes les connexions
+          iptables -t filler-P INPUT DROP
+          iptables -t filler-P FORWARD DROP
+          iptables -t filler-P OUTPUT DROP
+
+          # autorise loopback
+          iptables -t filter -A INPUT -i icmp -j ACCEPT
+          iptables -t filter -A OUTPUT -o icmp -j ACCEPT
+
+          # autorise ping ICMP
+          iptables -t filter -A INPUT -p icmp -j ACCEPT
+          iptables -t filter -A OUTPUT -p icmp -j ACCEPT
+
+          # ouverture du port SSH
+          iptables -t filter -A INPUT -p TCP --dport 22 -j ACCEPT
+          iptables -t filter -A OUTPUT -p TCP --sport 22 -j ACCEPT
+          # autorise les échanges sur le port 3306 en entrée, uniquement pour l'ip ?? et sur l'interface enp0s8
+          # on autorise les deux loadbalancers galera à acceder aux bdd
+          iptables -t filter -i enp0s3 --src {{ipGaleraMoodle1}} -A INPUT -p TCP --dport 3306 -j ACCEPT
+          iptables -t filter -i enp0s3 --src {{ipGaleraMoodle2}} -A INPUT -p TCP --dport 3306 -j ACCEPT
+          # autorise les échanges sur le port 3306 en sortie
+          iptables -t filter -A OUTPUT -p TCP --sport 3306 -j ACCEPT
+
+          # fermeture des autres ports
+          iptables -t filter -A INPUT -j DROP
+          iptables -t filter -A OUTPUT -j DROP

@@ -1,0 +1,150 @@
+---
+# This playbook deploys the whole application stack in this site.
+
+- name: deploy MariaDB and configure the databases
+  hosts: bddMoodle
+  remote_user: root
+
+  roles:
+    - bdd
+
+- name: deploy MariaDB and configure galera cluster
+  hosts: bddBackupMoodle1
+  remote_user: root
+
+  roles:
+    - bddBackup
+
+- name: deploy MariaDB and configure galera cluster
+  hosts: bddBackupMoodle2
+  remote_user: root
+
+  roles:
+    - bddBackup
+
+- name: configure and deploy galera cluster for moodle
+  hosts: loadbalancerGaleraMoodle
+  remote_user: root
+
+  roles:
+    - loadbalancerGaleraMoodle
+
+- name: configure and deploy the 2 moodles
+  hosts: moodle1
+  remote_user: root
+
+  roles:
+    - moodle
+
+- name: configure and deploy the 2 moodles
+  hosts: moodle2
+  remote_user: root
+
+  roles:
+    - moodle
+
+- name: configure and deploy loadbalancer cluster for moodle
+  hosts: loadbalancerMoodle
+  remote_user: root
+
+  roles:
+    - loadbalancerMoodle
+
+
+
+
+
+- name: deploy MariaDB and configure the databases
+  hosts: bddTomcat
+  remote_user: root
+
+  roles:
+    - bddTomcat
+
+- name: deploy MariaDB and configure galera cluster
+  hosts: bddBackupTomcat1
+  remote_user: root
+
+  roles:
+    - bddBackupTomcat
+
+- name: deploy MariaDB and configure galera cluster
+  hosts: bddBackupTomcat2
+  remote_user: root
+
+  roles:
+    - bddBackupTomcat
+
+- name: configure and deploy galera cluster for moodle
+  hosts: loadbalancerGaleraTomcat
+  remote_user: root
+
+  roles:
+    - loadbalancerGaleraTomcat
+
+- name: configure and deploy the 2 tomcat server
+  hosts: tomcat
+  remote_user: root
+
+  roles:
+    - tomcat
+    - jenkins 
+    - svn
+    - maven
+
+- name: configure and deploy loadbalancer cluster for moodle
+  hosts: loadbalancerTomcat
+  remote_user: root
+
+  roles:
+    - loadbalancerTomcat
+
+
+
+
+
+
+- name: configure and deploy loadbalancer cluster for moodle
+  hosts: loadbalancerReverse
+  remote_user: root
+
+  roles:
+    - loadbalancerReverse
+
+
+- name: configure and deploy reverse proxy nginx
+  hosts: reverseProxy
+  remote_user: root
+
+  roles:
+    - reverseProxy
+
+
+
+- name: configure and deploy server NFS
+  hosts: nfsServer
+  remote_user: root
+
+  roles:
+    - nfs
+
+- name: configure and mount NFS filesystem on clients
+  hosts: nfsClient
+  remote_user: root
+
+  roles:
+    - nfsClient
+
+- name: apply common configuration to all nodes
+  hosts: all
+  remote_user: root
+
+  roles:
+    - rudder
+
+- name: install and configure zabbix agent
+  hosts: all
+  remote_user: root
+
+  roles:
+    - zabbix-agent

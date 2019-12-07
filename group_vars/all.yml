@@ -1,0 +1,95 @@
+---
+###################### MOODLE ##################################################
+
+# VARIABLES GALERA CLUSTER MARIA DB
+ipBDD1: 192.168.110.18
+ipBDD2: 192.168.110.19
+ipBDD3: 192.168.110.20
+nodenameMain: mariadb1-moodle
+mysqlservice: mysqld
+mysql_port: 3306
+dbuser: root
+dbname: moodle
+upassword: network
+
+# VARIABLES LOAD BALANCER GALERA MOODLE
+mainLBGaleraMoodle: loadbalancer1-galera-moodle
+backupLBGaleraMoodle: loadbalancer2-galera-moodle
+passAuthkeysGaleraMoodle: networkGaleraMoodle
+ipVirtLBGMoodle: 192.168.110.15
+ipGaleraMoodle1: 192.168.110.16
+ipGaleraMoodle2: 192.168.110.17
+
+# VARIABLES MOODLE
+ipMoodle1: 192.168.110.13
+ipMoodle2: 192.168.110.14
+repositoryMoodle: http://download.moodle.org/stable35/moodle-latest-35.tgz
+archiveMoodle: moodle-latest-35.tgz
+
+# VARIABLES LOAD BALANCER MOODLE
+mainLBMoodle: loadbalancer1-moodle
+backupLBMoodle: loadbalancer2-moodle
+passAuthkeysMoodle: networkMoodle
+ipLBMoodle1: 192.168.110.11
+ipLBMoodle2: 192.168.110.12
+ipVirtLBM: 192.168.110.10
+
+################################################################################
+
+############################ TOMCAT ############################################
+
+# VARIABLES GALERA CLUSTER MARIA DB TOMCAT
+ipBDD1Tomcat: 192.168.110.29
+ipBDD2Tomcat: 192.168.110.30
+ipBDD3Tomcat: 192.168.110.31
+nodenameMainTomcat: mariadb1-tomcat
+mysqlserviceTomcat: mysqld
+mysql_portTomcat: 3306
+dbuserTomcat: root
+dbnameTomcat: moodle
+upasswordTomcat: network
+
+# VARIABLES LOAD BALANCER GALERA
+mainLBGaleraTomcat: loadbalancer1-galera-tomcat
+backupLBGaleraTomcat: loadbalancer2-galera-tomcat
+passAuthkeysGaleraTomcat: networkGaleraTomcat
+ipVirtLBGTomcat: 192.168.110.26
+ipGaleraTomcat1: 192.168.110.27
+ipGaleraTomcat2: 192.168.110.28
+
+# VARIABLES LOAD BALANCER TOMCAT
+mainLBTomcat: loadbalancer1-tomcat
+backupLBTomcat: loadbalancer2-tomcat
+passAuthkeysTomcat: networkTomcat
+ipVirtLBT: 192.168.110.21
+ipLBTomcat1: 192.168.110.22
+ipLBTomcat2: 192.168.110.23
+
+# VARIABLES TOMCAT
+ipTomcat1: 192.168.110.24
+ipTomcat2: 192.168.110.25
+repositoryTomcat: http://apache.mediamirrors.org/tomcat/tomcat-9/v9.0.20/bin/apache-tomcat-9.0.20.tar.gz
+
+#VARIABLES jenkins
+portJenkins: 8081
+
+################################################################################
+
+
+# VARIABLES ZABBIX
+ipZabbixServ: 192.168.110.81
+
+# VARIABLES RUDDER
+ipRudder: 192.168.110.70
+
+# VARIABLES REVERSE PROXY
+ipReverseProxy: 192.168.110.198
+ipReverse1: 192.168.110.194
+ipReverse2: 192.168.110.195
+mainLBReverse: loadbalancer1-reverse
+backupLBReverse: loadbalancer2-reverse
+passAuthkeysReverse: networkReverse
+
+# VARIABLES SERVEUR NFS
+dirNFS: serverNFS
+networkNFS: 192.168.110.18

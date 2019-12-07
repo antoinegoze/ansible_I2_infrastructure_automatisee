@@ -1,0 +1,74 @@
+---
+
+  - name: Update all packages to the latest version
+    apt:
+      update_cache: yes
+      state: latest
+
+  - name: install jdk
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - apache2
+      - subversion
+      - libapache2-mod-svn
+      - libsvn-dev
+      - python-passlib
+
+  - name: enabled dav
+    apache2_module: name=dav state=present
+
+  - name: enabled dav_svn
+    apache2_module: name=dav_svn state=present
+
+  - name: restart apache2
+    service:
+      name: apache2
+      state: restarted
+
+  - name: conf mod dav svn
+    blockinfile:
+      dest: /etc/apache2/mods-enabled/dav_svn.conf
+      insertafter: BOF
+      block: |
+        Alias /svn /var/lib/svn
+        <Location /svn>
+
+           DAV svn
+           SVNParentPath /var/lib/svn
+
+           AuthType Basic
+           AuthName "Subversion Repository"
+           AuthUserFile /etc/apache2/dav_svn.passwd
+           Require valid-user
+
+        </Location>
+
+  - name: Create svn repository
+    file:
+      path: /var/lib/svn/
+      state: directory
+
+#  - name:  create svn repository
+#    shell: "{{item}}"
+#    with_items:
+#      - svnadmin create /var/lib/svn/myrepo
+
+  - name: Create svn repository.
+    command: >
+      svnadmin create /var/lib/svn/myrepo
+
+  - name: Change file ownership, group and permissions of svn repository
+    file:
+      path: /var/lib/svn/
+      state: directory
+      owner: www-data
+      group: www-data
+      mode: '0775'
+      recurse: yes
+
+  - htpasswd:
+      path: /etc/apache2/dav_svn.passwd
+      name: admin
+      password: 'admin'
+      crypt_scheme: md5_crypt
+      state: present
