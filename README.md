@@ -1,22 +1,24 @@
-<<<<<<< HEAD
-######################################################################################################
-############################### PROJET ANSIBLE | EQUIPE 3 | OPTION CC ################################
-######################################################################################################
+------------------------------------------------------------------------------------------------
+
+# PROJET ANSIBLE | EQUIPE 3 | OPTION CC 
+
+================================================================================================
 
 Ce projet ansible permet d'exécuter le déploiement de notre infrastructure.
 
 
 Pour déployer le projet, tapez la commande :
-# ansible-playbook -i /etc/ansible/hosts infra.yml
+$ ansible-playbook -i /etc/ansible/hosts infra.yml
 
 Pour déployer une sous-partie de l'infrastructure, se référer aux groupes dans le fichier d'inventaire, et tapez la commande :
-# ansible-playbook -i /etc/ansible/hosts infra.yml --limit 
+$ ansible-playbook -i /etc/ansible/hosts infra.yml --limit 
 
 
+------------------------------------------------------------------------------------------------
 
-####################################################################################################
-### RESUME
-####################################################################################################
+## RESUME
+
+------------------------------------------------------------------------------------------------
 
 Pour rappel, notre projet vise à déployer 2 principaux services pour les utilisateurs, à savoir :
 1) un service Apache hébergeant tout type d'applications web
@@ -39,24 +41,18 @@ Cette solution doit répondre aux différents aspects de management de tout SI, 
 
 
 
-
-####################################################################################################
-### ANSIBLE DOC
-####################################################################################################
+----------------------------------------------------------------------------------------------------
+## ANSIBLE DOC
+----------------------------------------------------------------------------------------------------
 
 Un lien vers la doc ansible si besoin : https://docs.ansible.com/ansible/latest/
 Vous retrouverez toute la documentation liée à notre projet dans OpenProject
 
 
-
-####################################################################################################
-### REFERENCES
-####################################################################################################
+----------------------------------------------------------------------------------------------------
+## REFERENCES
+----------------------------------------------------------------------------------------------------
 
 Nous avons fait de notre mieux pour respecter les bonnes pratiques ansible pour vous permettre de le réutiliser, en se rérérent à des conventions comme :
 https://docs.ansible.com/ansible/latest/user_guide/playbooks_best_practices.html
 https://github.com/ansible/ansible-examples
-=======
-# Depot_projetcc_equipe3
-
->>>>>>> Change extension of Readme file
